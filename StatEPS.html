@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StatEPS</title>
+    <style>
+        /* Styles CSS pour l'apparence générale */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            color: #007bff;
+        }
+        #controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #fff;
+            text-align: center;
+        }
+        #controls button {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+        #controls button:hover {
+            background-color: #0056b3;
+        }
+        #score-table, #feedback-table, #legend-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        #score-table th, #score-table td, 
+        #feedback-table th, #feedback-table td, 
+        #legend-table th, #legend-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+        #score-table th, #feedback-table th {
+            background-color: #333;
+            color: white;
+            font-weight: normal;
+        }
+        #score-table tr:nth-child(even), #feedback-table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        
+        /* Mise en forme de la légende (Degrés de Maîtrise) */
+        #legend-table {
+            margin-bottom: 20px;
+        }
+        #legend-table td {
+            font-weight: bold; /* Mise en gras appliquée ici */
+            padding: 8px 12px;
+            width: 20%;
+        }
+        #legend-table .legend-header {
+            background-color: #333;
+            color: white;
+            font-weight: normal;
+            width: 20%;
+        }
+        .ratio-cell {
+            font-size: 0.9em;
+            font-weight: bold; /* Ratio aussi en gras */
+        }
+
+        /* Styles de couleurs de Maîtrise avec logique de contraste et de gras */
+        
+        /* Rouge, Vert foncé et Vert clair: Texte en blanc, gras */
+        .tres-satisfaisante { 
+            background-color: #1b5e20; 
+            color: white; 
+            font-weight: bold;
+        } 
+        .insuffisante { 
+            background-color: #f44336; 
+            color: white; 
+            font-weight: bold;
+        }    
+        .satisfaisante { 
+            background-color: #4caf50; 
+            color: white; 
+            font-weight: bold;
+        }    
+
+        /* Jaune: Texte en noir, gras */
+        .fragile { 
+            background-color: #ffeb3b; 
+            color: #333; 
+            font-weight: bold;
+        }      
+
+        /* Autres styles */
+        .score-display { font-size: 1.1em; font-weight: bold; }
+        .total-score { font-size: 1.2em; color: #d9534f; font-weight: bold; }
+        .action-button { padding: 8px 15px; margin: 2px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; }
+        .btn-plus-1 { background-color: #5cb85c; color: white; }
+        .btn-plus-2 { background-color: #f0ad4e; color: white; }
+        
+        /* Bouton d'exportation */
+        #export-button-container {
+             text-align: center;
+             margin-top: 20px;
+             margin-bottom: 40px;
+        }
+        #export-button { 
+            background-color: #17a2b8; 
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        #export-button:hover { 
+            background-color: #138496; 
+        }
+
+        /* Pied de page */
+        #footer-text {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 0.8em;
+            color: #888;
+        }
+
+        /* Styles spécifiques pour l'impression/PDF */
+        @media print {
+            body {
+                background-color: white;
+                margin: 0;
+            }
+            /* Conserver les couleurs de fond des cellules */
+            .tres-satisfaisante, .satisfaisante, .fragile, .insuffisante, #legend-table th, #legend-table td {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                font-weight: bold !important; /* Assurer le gras dans le PDF */
+            }
+            /* Couleurs de texte spécifiques pour l'impression */
+            .fragile, #legend-table td.fragile {
+                 color: #333 !important; /* Jaune -> Noir */
+            }
+            .tres-satisfaisante, .insuffisante, .satisfaisante {
+                color: white !important; /* Rouge, Vert foncé et Vert clair -> Blanc */
+            }
+            /* Masquer les éléments non pertinents pour l'impression */
+            #controls, .action-column, .action-button, #export-button-container {
+                display: none !important;
+            }
+            /* Assurer que les entrées de nom s'affichent comme du texte normal */
+            input[type="text"] {
+                border: none;
+                background: none;
+                text-align: center;
+                padding: 0;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>📊 StatEPS</h1>
+    </header>
+
+    <div id="controls">
+        <p>Choisir le nombre de joueurs :</p>
+        <button onclick="setNumPlayers(3)">3 Joueurs</button>
+        <button onclick="setNumPlayers(4)">4 Joueurs</button>
+        <button onclick="setNumPlayers(5)">5 Joueurs</button>
+    </div>
+    
+    <table id="score-table">
+        </table>
+
+    <hr>
+
+    <div id="feedback-section">
+        <h2>✨ Degré de Maîtrise</h2>
+        
+        <table id="legend-table">
+            <tr>
+                <td class="legend-header">Degré de Maîtrise</td>
+                <td class="insuffisante">Insuffisante</td>
+                <td class="fragile">Fragile</td>
+                <td class="satisfaisante">Satisfaisante</td>
+                <td class="tres-satisfaisante">Très satisfaisante</td>
+            </tr>
+            <tr>
+                <td class="legend-header">Ratio</td>
+                <td class="insuffisante ratio-cell">&lt;25%</td>
+                <td class="fragile ratio-cell">25% à 33%</td>
+                <td class="satisfaisante ratio-cell">33% à 50%</td>
+                <td class="tres-satisfaisante ratio-cell">&gt;50%</td>
+            </tr>
+        </table>
+        
+        <table id="feedback-table">
+            </table>
+        <p style="margin-top: 15px; font-size: 0.9em; color: #666;">
+            *Le ratio est calculé uniquement si le joueur a marqué au moins 1 point de match (dénominateur > 0).
+        </p>
+    </div>
+
+    <div id="export-button-container">
+        <button id="export-button" onclick="window.print()">
+            📄 Exporter en PDF / Imprimer les résultats
+        </button>
+    </div>
+
+    <div id="footer-text">
+        StatEPS - HUGEDET Florian
+    </div>
+
+    <script>
+        let numPlayers = 0;
+        const scoreTable = document.getElementById('score-table');
+        const feedbackTable = document.getElementById('feedback-table');
+
+        // Initialisation de l'état des scores
+        let playerScores = {}; 
+
+        /** Définit le nombre de joueurs et génère les tableaux. */
+        function setNumPlayers(count) {
+            // Initialiser les scores pour les nouveaux joueurs si nécessaire
+            for(let i = 1; i <= count; i++) {
+                if (!playerScores[i]) {
+                    playerScores[i] = { match: 0, bonus: 0, name: `Joueur ${i}` };
+                }
+            }
+            numPlayers = count;
+            generateTable();
+        }
+
+        /** Génère (ou regénère) les deux tableaux de score et de feedback. */
+        function generateTable() {
+            if (numPlayers === 0) {
+                scoreTable.innerHTML = '<tr><td colspan="5">Veuillez choisir le nombre de joueurs.</td></tr>';
+                feedbackTable.innerHTML = '';
+                document.getElementById('feedback-section').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('feedback-section').style.display = 'block';
+
+            // --- 1. Génération du Tableau de Score Principal ---
+            let scoreHtml = `
+                <thead>
+                    <tr>
+                        <th>Joueur</th>
+                        <th>Points Match</th>
+                        <th>Points Bonus</th>
+                        <th>Total (P+B)</th>
+                        <th class="action-column">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+
+            for (let i = 1; i <= numPlayers; i++) {
+                const score = playerScores[i];
+                const total = score.match + score.bonus;
+
+                scoreHtml += `
+                    <tr id="player-row-${i}">
+                        <td>
+                            <input type="text" value="${score.name}" id="name-${i}" style="width: 80px; text-align: center;" onchange="updatePlayerName(${i}, this.value)">
+                        </td>
+                        <td class="score-display" id="match-score-${i}" data-score="${score.match}">${score.match}</td>
+                        <td class="score-display" id="bonus-score-${i}" data-score="${score.bonus}">${score.bonus}</td>
+                        <td class="total-score" id="total-score-${i}">${score.match} + ${score.bonus} = ${total}</td>
+                        <td class="action-column">
+                            <button class="action-button btn-plus-1" onclick="addScore(${i}, 1, 0)">+1 pt</button>
+                            <button class="action-button btn-plus-2" onclick="addScore(${i}, 1, 1)">+1 pt + 1 bonus</button>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            scoreHtml += `</tbody>`;
+            scoreTable.innerHTML = scoreHtml;
+
+            // --- 2. Génération du Tableau de Feedback ---
+            updateFeedbackTable();
+        }
+        
+        /** Met à jour le nom du joueur dans l'objet de score. */
+        function updatePlayerName(playerId, newName) {
+            playerScores[playerId].name = newName;
+            updateFeedbackTable(); 
+        }
+
+        /** Ajoute des points au score d'un joueur et met à jour les deux tableaux. */
+        function addScore(playerId, matchPoints, bonusPoints) {
+            const score = playerScores[playerId];
+
+            // Mettre à jour les scores internes
+            score.match += matchPoints;
+            score.bonus += bonusPoints;
+            const newTotal = score.match + score.bonus;
+            
+            // Mettre à jour l'affichage principal
+            document.getElementById(`match-score-${playerId}`).textContent = score.match;
+            document.getElementById(`bonus-score-${playerId}`).textContent = score.bonus;
+            document.getElementById(`total-score-${playerId}`).textContent = `${score.match} + ${score.bonus} = ${newTotal}`;
+
+            // Mettre à jour le tableau de feedback
+            updateFeedbackRow(playerId);
+        }
+
+        /** Calcule le ratio et détermine le niveau de maîtrise et la classe CSS. */
+        function calculateFeedback(match, bonus) {
+            if (match === 0) {
+                return { 
+                    ratio: 'N/A (P = 0)', 
+                    feedbackText: 'Pas assez de données', 
+                    cssClass: '' 
+                };
+            }
+
+            const ratioValue = (bonus / match);
+            const ratioPercentage = ratioValue * 100;
+            const ratioDisplay = ratioPercentage.toFixed(1) + '%';
+            let feedbackText = '';
+            let cssClass = '';
+
+            if (ratioPercentage > 50) {
+                feedbackText = 'Maîtrise Très Satisfaisante';
+                cssClass = 'tres-satisfaisante';
+            } else if (ratioPercentage >= 33) {
+                feedbackText = 'Maîtrise Satisfaisante';
+                cssClass = 'satisfaisante';
+            } else if (ratioPercentage >= 25) {
+                feedbackText = 'Maîtrise Fragile';
+                cssClass = 'fragile';
+            } else { // ratioPercentage < 25
+                feedbackText = 'Maîtrise Insuffisante';
+                cssClass = 'insuffisante';
+            }
+
+            return { ratio: ratioDisplay, feedbackText: feedbackText, cssClass: cssClass };
+        }
+
+        /** Met à jour le contenu d'une seule ligne du tableau de feedback. */
+        function updateFeedbackRow(playerId) {
+            const score = playerScores[playerId];
+            const feedback = calculateFeedback(score.match, score.bonus);
+            const rowEl = document.getElementById(`feedback-row-${playerId}`);
+            
+            if (rowEl) {
+                rowEl.innerHTML = `
+                    <td>${score.name}</td>
+                    <td>${score.bonus} / ${score.match}</td>
+                    <td class="score-display">${feedback.ratio}</td>
+                    <td class="feedback-cell ${feedback.cssClass}">${feedback.feedbackText}</td>
+                `;
+            }
+        }
+
+
+        /** Génère (ou regénère) le tableau de feedback complet. */
+        function updateFeedbackTable() {
+            let feedbackHtml = `
+                <thead>
+                    <tr>
+                        <th>Joueur</th>
+                        <th>Calcul (Bonus/Match)</th>
+                        <th>Ratio</th>
+                        <th>Niveau de Maîtrise</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+
+            for (let i = 1; i <= numPlayers; i++) {
+                const score = playerScores[i];
+                const feedback = calculateFeedback(score.match, score.bonus);
+
+                feedbackHtml += `
+                    <tr id="feedback-row-${i}">
+                        <td>${score.name}</td>
+                        <td>${score.bonus} / ${score.match}</td>
+                        <td class="score-display">${feedback.ratio}</td>
+                        <td class="feedback-cell ${feedback.cssClass}">${feedback.feedbackText}</td>
+                    </tr>
+                `;
+            }
+
+            feedbackHtml += `</tbody>`;
+            feedbackTable.innerHTML = feedbackHtml;
+        }
+
+        // Initialisation : afficher le message par défaut
+        generateTable();
+    </script>
+
+</body>
+</html>
